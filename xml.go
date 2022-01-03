@@ -139,7 +139,7 @@ type propfindProps []xml.Name
 // UnmarshalXML appends the property names enclosed within start to pn.
 //
 // It returns an error if start does not contain any properties or if
-// properties contain values. Character data between properties is ignored.
+// properties contain values. Character Data between properties is ignored.
 func (pn *propfindProps) UnmarshalXML(d *ixml.Decoder, start ixml.StartElement) error {
 	for {
 		t, err := next(d)

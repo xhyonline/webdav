@@ -131,15 +131,15 @@ func (d Dir) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 // NewMemFS returns a new in-memory FileSystem implementation.
 func NewMemFS() FileSystem {
 	return &MemFS{
-		root: memFSNode{
-			children: make(map[string]*memFSNode),
-			mode:     0660 | os.ModeDir,
-			modTime:  time.Now(),
+		root: MemFSNode{
+			Children: make(map[string]*MemFSNode),
+			Mode:     0660 | os.ModeDir,
+			ModTime:  time.Now(),
 		},
 	}
 }
 
-// A MemFS implements FileSystem, storing all metadata and actual file data
+// A MemFS implements FileSystem, storing all metadata and actual file Data
 // in-memory. No limits on filesystem size are used, so it is not recommended
 // this be used where the clients are untrusted.
 //
@@ -149,7 +149,7 @@ func NewMemFS() FileSystem {
 // TODO: Enforce file permissions.
 type MemFS struct {
 	mu   sync.Mutex
-	root memFSNode
+	root MemFSNode
 }
 
 // TODO: clean up and rationalize the walk/find code.
@@ -165,7 +165,7 @@ type MemFS struct {
 //   - "/foo/bar/", "x", true
 // The frag argument will be empty only if dir is the root node and the walk
 // ends at that root node.
-func (fs *MemFS) walk(op, fullname string, f func(dir *memFSNode, frag string, final bool) error) error {
+func (fs *MemFS) walk(op, fullname string, f func(dir *MemFSNode, frag string, final bool) error) error {
 	original := fullname
 	fullname = slashClean(fullname)
 
@@ -196,7 +196,7 @@ func (fs *MemFS) walk(op, fullname string, f func(dir *memFSNode, frag string, f
 		if final {
 			break
 		}
-		child := dir.children[frag]
+		child := dir.Children[frag]
 		if child == nil {
 			return &os.PathError{
 				Op:   op,
@@ -204,7 +204,7 @@ func (fs *MemFS) walk(op, fullname string, f func(dir *memFSNode, frag string, f
 				Err:  os.ErrNotExist,
 			}
 		}
-		if !child.mode.IsDir() {
+		if !child.Mode.IsDir() {
 			return &os.PathError{
 				Op:   op,
 				Path: original,
@@ -226,8 +226,8 @@ func (fs *MemFS) walk(op, fullname string, f func(dir *memFSNode, frag string, f
 // isn't a directory, but it will not return an error per se if the child does
 // not already exist. The error returned is either nil or an *os.PathError
 // whose Op is op.
-func (fs *MemFS) find(op, fullname string) (parent *memFSNode, frag string, err error) {
-	err = fs.walk(op, fullname, func(parent0 *memFSNode, frag0 string, final bool) error {
+func (fs *MemFS) find(op, fullname string) (parent *MemFSNode, frag string, err error) {
+	err = fs.walk(op, fullname, func(parent0 *MemFSNode, frag0 string, final bool) error {
 		if !final {
 			return nil
 		}
@@ -251,13 +251,13 @@ func (fs *MemFS) Mkdir(ctx context.Context, name string, perm os.FileMode) error
 		// We can't create the root.
 		return os.ErrInvalid
 	}
-	if _, ok := dir.children[frag]; ok {
+	if _, ok := dir.Children[frag]; ok {
 		return os.ErrExist
 	}
-	dir.children[frag] = &memFSNode{
-		children: make(map[string]*memFSNode),
-		mode:     perm.Perm() | os.ModeDir,
-		modTime:  time.Now(),
+	dir.Children[frag] = &MemFSNode{
+		Children: make(map[string]*MemFSNode),
+		Mode:     perm.Perm() | os.ModeDir,
+		ModTime:  time.Now(),
 	}
 	return nil
 }
@@ -270,7 +270,7 @@ func (fs *MemFS) OpenFile(ctx context.Context, name string, flag int, perm os.Fi
 	if err != nil {
 		return nil, err
 	}
-	var n *memFSNode
+	var n *MemFSNode
 	if dir == nil {
 		// We're opening the root.
 		if runtime.GOOS == "zos" {
@@ -285,7 +285,7 @@ func (fs *MemFS) OpenFile(ctx context.Context, name string, flag int, perm os.Fi
 		n, frag = &fs.root, "/"
 
 	} else {
-		n = dir.children[frag]
+		n = dir.Children[frag]
 		if flag&(os.O_SYNC|os.O_APPEND) != 0 {
 			// memFile doesn't support these flags yet.
 			return nil, os.ErrInvalid
@@ -295,10 +295,10 @@ func (fs *MemFS) OpenFile(ctx context.Context, name string, flag int, perm os.Fi
 				return nil, os.ErrExist
 			}
 			if n == nil {
-				n = &memFSNode{
-					mode: perm.Perm(),
+				n = &MemFSNode{
+					Mode: perm.Perm(),
 				}
-				dir.children[frag] = n
+				dir.Children[frag] = n
 			}
 		}
 		if n == nil {
@@ -306,13 +306,13 @@ func (fs *MemFS) OpenFile(ctx context.Context, name string, flag int, perm os.Fi
 		}
 		if flag&(os.O_WRONLY|os.O_RDWR) != 0 && flag&os.O_TRUNC != 0 {
 			n.mu.Lock()
-			n.data = nil
+			n.Data = nil
 			n.mu.Unlock()
 		}
 	}
 
-	children := make([]os.FileInfo, 0, len(n.children))
-	for cName, c := range n.children {
+	children := make([]os.FileInfo, 0, len(n.Children))
+	for cName, c := range n.Children {
 		children = append(children, c.stat(cName))
 	}
 	return &memFile{
@@ -334,7 +334,7 @@ func (fs *MemFS) RemoveAll(ctx context.Context, name string) error {
 		// We can't remove the root.
 		return os.ErrInvalid
 	}
-	delete(dir.children, frag)
+	delete(dir.Children, frag)
 	return nil
 }
 
@@ -370,22 +370,22 @@ func (fs *MemFS) Rename(ctx context.Context, oldName, newName string) error {
 		return os.ErrInvalid
 	}
 
-	oNode, ok := oDir.children[oFrag]
+	oNode, ok := oDir.Children[oFrag]
 	if !ok {
 		return os.ErrNotExist
 	}
-	if oNode.children != nil {
-		if nNode, ok := nDir.children[nFrag]; ok {
-			if nNode.children == nil {
+	if oNode.Children != nil {
+		if nNode, ok := nDir.Children[nFrag]; ok {
+			if nNode.Children == nil {
 				return errNotADirectory
 			}
-			if len(nNode.children) != 0 {
+			if len(nNode.Children) != 0 {
 				return errDirectoryNotEmpty
 			}
 		}
 	}
-	delete(oDir.children, oFrag)
-	nDir.children[nFrag] = oNode
+	delete(oDir.Children, oFrag)
+	nDir.Children[nFrag] = oNode
 	return nil
 }
 
@@ -401,37 +401,37 @@ func (fs *MemFS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 		// We're stat'ting the root.
 		return fs.root.stat("/"), nil
 	}
-	if n, ok := dir.children[frag]; ok {
+	if n, ok := dir.Children[frag]; ok {
 		return n.stat(path.Base(name)), nil
 	}
 	return nil, os.ErrNotExist
 }
 
-// A memFSNode represents a single entry in the in-memory filesystem and also
+// A MemFSNode represents a single entry in the in-memory filesystem and also
 // implements os.FileInfo.
-type memFSNode struct {
-	// children is protected by MemFS.mu.
-	children map[string]*memFSNode
+type MemFSNode struct {
+	// Children is protected by MemFS.mu.
+	Children map[string]*MemFSNode
 
-	mu        sync.Mutex
-	data      []byte
-	mode      os.FileMode
-	modTime   time.Time
+	mu   sync.Mutex
+	Data []byte
+	Mode os.FileMode
+	ModTime   time.Time
 	deadProps map[xml.Name]Property
 }
 
-func (n *memFSNode) stat(name string) *memFileInfo {
+func (n *MemFSNode) stat(name string) *memFileInfo {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	return &memFileInfo{
 		name:    name,
-		size:    int64(len(n.data)),
-		mode:    n.mode,
-		modTime: n.modTime,
+		size:    int64(len(n.Data)),
+		mode:    n.Mode,
+		modTime: n.ModTime,
 	}
 }
 
-func (n *memFSNode) DeadProps() (map[xml.Name]Property, error) {
+func (n *MemFSNode) DeadProps() (map[xml.Name]Property, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if len(n.deadProps) == 0 {
@@ -444,7 +444,7 @@ func (n *memFSNode) DeadProps() (map[xml.Name]Property, error) {
 	return ret, nil
 }
 
-func (n *memFSNode) Patch(patches []Proppatch) ([]Propstat, error) {
+func (n *MemFSNode) Patch(patches []Proppatch) ([]Propstat, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	pstat := Propstat{Status: http.StatusOK}
@@ -478,11 +478,11 @@ func (f *memFileInfo) ModTime() time.Time { return f.modTime }
 func (f *memFileInfo) IsDir() bool        { return f.mode.IsDir() }
 func (f *memFileInfo) Sys() interface{}   { return nil }
 
-// A memFile is a File implementation for a memFSNode. It is a per-file (not
+// A memFile is a File implementation for a MemFSNode. It is a per-file (not
 // per-node) read/write position, and a snapshot of the MemFS' tree structure
-// (a node's name and children) for that node.
+// (a node's name and Children) for that node.
 type memFile struct {
-	n                *memFSNode
+	n                *MemFSNode
 	nameSnapshot     string
 	childrenSnapshot []os.FileInfo
 	// pos is protected by n.mu.
@@ -502,13 +502,13 @@ func (f *memFile) Close() error {
 func (f *memFile) Read(p []byte) (int, error) {
 	f.n.mu.Lock()
 	defer f.n.mu.Unlock()
-	if f.n.mode.IsDir() {
+	if f.n.Mode.IsDir() {
 		return 0, os.ErrInvalid
 	}
-	if f.pos >= len(f.n.data) {
+	if f.pos >= len(f.n.Data) {
 		return 0, io.EOF
 	}
-	n := copy(p, f.n.data[f.pos:])
+	n := copy(p, f.n.Data[f.pos:])
 	f.pos += n
 	return n, nil
 }
@@ -516,7 +516,7 @@ func (f *memFile) Read(p []byte) (int, error) {
 func (f *memFile) Readdir(count int) ([]os.FileInfo, error) {
 	f.n.mu.Lock()
 	defer f.n.mu.Unlock()
-	if !f.n.mode.IsDir() {
+	if !f.n.Mode.IsDir() {
 		return nil, os.ErrInvalid
 	}
 	old := f.pos
@@ -551,7 +551,7 @@ func (f *memFile) Seek(offset int64, whence int) (int64, error) {
 	case os.SEEK_CUR:
 		npos += int(offset)
 	case os.SEEK_END:
-		npos = len(f.n.data) + int(offset)
+		npos = len(f.n.Data) + int(offset)
 	default:
 		npos = -1
 	}
@@ -571,36 +571,36 @@ func (f *memFile) Write(p []byte) (int, error) {
 	f.n.mu.Lock()
 	defer f.n.mu.Unlock()
 
-	if f.n.mode.IsDir() {
+	if f.n.Mode.IsDir() {
 		return 0, os.ErrInvalid
 	}
-	if f.pos < len(f.n.data) {
-		n := copy(f.n.data[f.pos:], p)
+	if f.pos < len(f.n.Data) {
+		n := copy(f.n.Data[f.pos:], p)
 		f.pos += n
 		p = p[n:]
-	} else if f.pos > len(f.n.data) {
+	} else if f.pos > len(f.n.Data) {
 		// Write permits the creation of holes, if we've seek'ed past the
 		// existing end of file.
-		if f.pos <= cap(f.n.data) {
-			oldLen := len(f.n.data)
-			f.n.data = f.n.data[:f.pos]
-			hole := f.n.data[oldLen:]
+		if f.pos <= cap(f.n.Data) {
+			oldLen := len(f.n.Data)
+			f.n.Data = f.n.Data[:f.pos]
+			hole := f.n.Data[oldLen:]
 			for i := range hole {
 				hole[i] = 0
 			}
 		} else {
 			d := make([]byte, f.pos, f.pos+len(p))
-			copy(d, f.n.data)
-			f.n.data = d
+			copy(d, f.n.Data)
+			f.n.Data = d
 		}
 	}
 
 	if len(p) > 0 {
-		// We should only get here if f.pos == len(f.n.data).
-		f.n.data = append(f.n.data, p...)
-		f.pos = len(f.n.data)
+		// We should only get here if f.pos == len(f.n.Data).
+		f.n.Data = append(f.n.Data, p...)
+		f.pos = len(f.n.Data)
 	}
-	f.n.modTime = time.Now()
+	f.n.ModTime = time.Now()
 	return lenp, nil
 }
 

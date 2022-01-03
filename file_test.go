@@ -210,7 +210,7 @@ func TestWalk(t *testing.T) {
 		}
 
 		i, prevFrag := 0, ""
-		err := fs.walk("test", tc.dir, func(dir *memFSNode, frag string, final bool) error {
+		err := fs.walk("test", tc.dir, func(dir *MemFSNode, frag string, final bool) error {
 			got := walkStep{
 				name:  prevFrag,
 				frag:  frag,
@@ -230,7 +230,7 @@ func TestWalk(t *testing.T) {
 	}
 }
 
-// find appends to ss the names of the named file and its children. It is
+// find appends to ss the names of the named file and its Children. It is
 // analogous to the Unix find command.
 //
 // The returned strings are not guaranteed to be in any particular order.
@@ -552,7 +552,7 @@ func TestMemFSRoot(t *testing.T) {
 			t.Fatalf("i=%d: Readdir: %v", i, err)
 		}
 		if len(children) != i {
-			t.Fatalf("i=%d: got %d children, want %d", i, len(children), i)
+			t.Fatalf("i=%d: got %d Children, want %d", i, len(children), i)
 		}
 
 		if _, err := f.Write(make([]byte, 1)); err == nil {

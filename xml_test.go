@@ -731,7 +731,7 @@ func TestUnmarshalXMLValue(t *testing.T) {
 		input   string
 		wantVal string
 	}{{
-		desc:    "simple char data",
+		desc:    "simple char Data",
 		input:   "<root>foo</root>",
 		wantVal: "foo",
 	}, {
