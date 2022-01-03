@@ -53,7 +53,7 @@ type LockSystem interface {
 	// error, the Handler will write a "500 Internal Server Error" HTTP status.
 	Confirm(now time.Time, name0, name1 string, conditions ...Condition) (release func(), err error)
 
-	// Create creates a lock with the given depth, duration, owner and root
+	// Create creates a lock with the given depth, duration, owner and Root
 	// (name). The depth will either be negative (meaning infinite) or zero.
 	//
 	// If Create returns ErrLocked then the Handler will write a "423 Locked"
@@ -95,8 +95,8 @@ type LockSystem interface {
 
 // LockDetails are a lock's metadata.
 type LockDetails struct {
-	// Root is the root resource name being locked. For a zero-depth lock, the
-	// root is the only resource being locked.
+	// Root is the Root resource name being locked. For a zero-depth lock, the
+	// Root is the only resource being locked.
 	Root string
 	// Duration is the lock timeout. A negative duration means infinite.
 	Duration time.Duration

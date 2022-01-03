@@ -487,7 +487,7 @@ func testFS(t *testing.T, fs FileSystem) {
 					}
 
 					if fileName == "/" {
-						// For a Dir FileSystem, the virtual file system root maps to a
+						// For a Dir FileSystem, the virtual file system Root maps to a
 						// real file system name like "/tmp/webdav-test012345", which does
 						// not end with "/". We skip such cases.
 					} else if statName := stat.Name(); path.Base(fileName) != statName {
@@ -966,7 +966,7 @@ func TestWalkFS(t *testing.T) {
 		walkFn  filepath.WalkFunc
 		want    []string
 	}{{
-		"just root",
+		"just Root",
 		[]string{},
 		"/",
 		infiniteDepth,
@@ -975,7 +975,7 @@ func TestWalkFS(t *testing.T) {
 			"/",
 		},
 	}, {
-		"infinite walk from root",
+		"infinite walk from Root",
 		[]string{
 			"mkdir /a",
 			"mkdir /a/b",
@@ -1016,7 +1016,7 @@ func TestWalkFS(t *testing.T) {
 			"/a/d",
 		},
 	}, {
-		"depth 1 walk from root",
+		"depth 1 walk from Root",
 		[]string{
 			"mkdir /a",
 			"mkdir /a/b",

@@ -732,27 +732,27 @@ func TestUnmarshalXMLValue(t *testing.T) {
 		wantVal string
 	}{{
 		desc:    "simple char Data",
-		input:   "<root>foo</root>",
+		input:   "<Root>foo</Root>",
 		wantVal: "foo",
 	}, {
 		desc:    "empty element",
-		input:   "<root><foo/></root>",
+		input:   "<Root><foo/></Root>",
 		wantVal: "<foo/>",
 	}, {
 		desc:    "preserve namespace",
-		input:   `<root><foo xmlns="bar"/></root>`,
+		input:   `<Root><foo xmlns="bar"/></Root>`,
 		wantVal: `<foo xmlns="bar"/>`,
 	}, {
-		desc:    "preserve root element namespace",
-		input:   `<root xmlns:bar="bar"><bar:foo/></root>`,
+		desc:    "preserve Root element namespace",
+		input:   `<Root xmlns:bar="bar"><bar:foo/></Root>`,
 		wantVal: `<foo xmlns="bar"/>`,
 	}, {
 		desc:    "preserve whitespace",
-		input:   "<root>  \t </root>",
+		input:   "<Root>  \t </Root>",
 		wantVal: "  \t ",
 	}, {
 		desc:    "preserve mixed content",
-		input:   `<root xmlns="bar">  <foo>a<bam xmlns="baz"/> </foo> </root>`,
+		input:   `<Root xmlns="bar">  <foo>a<bam xmlns="baz"/> </foo> </Root>`,
 		wantVal: `  <foo xmlns="bar">a<bam xmlns="baz"/> </foo> `,
 	}, {
 		desc: "section 9.2",

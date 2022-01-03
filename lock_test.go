@@ -539,15 +539,15 @@ func (m *memLS) consistent() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// If m.byName is non-empty, then it must contain an entry for the root "/",
+	// If m.byName is non-empty, then it must contain an entry for the Root "/",
 	// and its refCount should equal the number of locked nodes.
 	if len(m.byName) > 0 {
 		n := m.byName["/"]
 		if n == nil {
-			return fmt.Errorf(`non-empty m.byName does not contain the root "/"`)
+			return fmt.Errorf(`non-empty m.byName does not contain the Root "/"`)
 		}
 		if n.refCount != len(m.byToken) {
-			return fmt.Errorf("root node refCount=%d, differs from len(m.byToken)=%d", n.refCount, len(m.byToken))
+			return fmt.Errorf("Root node refCount=%d, differs from len(m.byToken)=%d", n.refCount, len(m.byToken))
 		}
 	}
 
